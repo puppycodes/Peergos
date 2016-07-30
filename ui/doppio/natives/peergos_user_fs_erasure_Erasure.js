@@ -23,21 +23,16 @@ registerNatives({
 				}
 				thread.asyncReturn(result);
 			});
+		},
+		'recombineJS([[BIII)[B': function(thread, encoded, truncateTo, originalBlobs, allowedFailures) {
+			thread.setStatus(ThreadStatus.ASYNC_WAITING);
+			var arr = window.erasure.recombine(encoded.array, truncateTo, originalBlobs, allowedFailures);
+
+			var i8Array = new Int8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+			var javaByteArray = Doppio.VM.Util.newArrayFromDataWithClass(thread, thread.getBsCl().getInitializedClass(thread, '[B'), i8Array);
+
+			thread.asyncReturn(javaByteArray);
 		}
     }
-    /*,
-    //native public static byte[] recombine(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures);
-    'peergos/user/fs/erasure/Erasure': {
-    		'recombine([[BIII)[B': function(thread, encoded, truncateTo, originalBlobs, allowedFailures) {
-    		console.log("kev in recombine");
-    			thread.setStatus(ThreadStatus.ASYNC_WAITING);
-    			var arr = erasure.recombine(encoded.array, truncateTo, originalBlobs, allowedFailures);
-
-				var i8Array = new Int8Array(arr.buffer, arr.byteOffset, arr.byteLength);
-				var javaByteArray = Doppio.VM.Util.newArrayFromDataWithClass(thread, thread.getBsCl().getInitializedClass(thread, '[B'), i8Array);
-
-				thread.asyncReturn(javaByteArray);
-    		}
-	}*/
 });
 

@@ -17,7 +17,7 @@ public interface Fragmenter {
 
     byte[][] split(byte[] input, boolean isJavascript);
 
-    byte[] recombine(byte[][] encoded, int inputLength);
+    byte[] recombine(byte[][] encoded, int inputLength, boolean useJavascript);
 
     void serialize(DataSink dout);
 
@@ -111,7 +111,7 @@ public interface Fragmenter {
                 assertTrue(length <= Fragment.MAX_LENGTH);
             }
 
-            byte[] recombine = fragmenter.recombine(split, input.length);
+            byte[] recombine = fragmenter.recombine(split, input.length, false);
 
             assertTrue("recombine(split(input)) = input", Arrays.equals(input, recombine));
         }

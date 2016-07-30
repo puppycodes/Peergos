@@ -28,7 +28,7 @@ public class SplitFragmenter implements Fragmenter {
         dout.writeInt(peergos.user.fs.Fragmenter.Type.SIMPLE.val);
     }
 
-    public byte[] recombine(byte[][] encoded, int truncateTo) {
+    public byte[] recombine(byte[][] encoded, int truncateTo, boolean useJavascript) {
         int length = 0;
         for (int i=0; i < encoded.length; i++)
             length += encoded[i].length;

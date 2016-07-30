@@ -22,9 +22,9 @@ public class ErasureFragmenter implements Fragmenter {
         return Erasure.split(input, nOriginalFragments, nAllowedFailures, isJavaScript);
     }
 
-    public byte[] recombine(byte[][] encoded, int truncateLength) {
+    public byte[] recombine(byte[][] encoded, int truncateLength, boolean useJavascript) {
         // truncateTo should be  input.length
-        return Erasure.recombine(encoded, truncateLength, nOriginalFragments, nAllowedFailures);
+        return Erasure.recombine(encoded, truncateLength, nOriginalFragments, nAllowedFailures, useJavascript);
     }
 
     public void serialize(DataSink dout) {

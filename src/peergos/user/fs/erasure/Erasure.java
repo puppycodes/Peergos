@@ -55,9 +55,18 @@ public class Erasure {
         System.out.println("Erasure encoding took "+(t2-t1)+ " mS");
         return res;
     }
+    public static byte[] recombine(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures, boolean useJavascript)
+    {
+        if(useJavascript) {
+            return recombineJS(encoded, truncateTo, originalBlobs, allowedFailures);
+        } else {
+            return recombine(encoded, truncateTo, originalBlobs, allowedFailures);
+        }
+    }
 
-    //native public static byte[] recombine(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures);
-    public static byte[] recombine(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures)
+    native public static byte[] recombineJS(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures);
+
+    private static byte[] recombine(byte[][] encoded, int truncateTo, int originalBlobs, int allowedFailures)
     {
         return recombine(new GaloisField256(), encoded, truncateTo, originalBlobs, allowedFailures);
     }

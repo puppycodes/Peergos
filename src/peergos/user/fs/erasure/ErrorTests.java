@@ -106,7 +106,7 @@ public class ErrorTests {
                 encoded[index] = new byte[encoded[index].length];
             }
         }
-        byte[] recovered = Erasure.recombine(encoded, 5 * 1024 * 1024, fragments, maxErrors);
+        byte[] recovered = Erasure.recombine(encoded, 5 * 1024 * 1024, fragments, maxErrors, false);
         if (!Arrays.equals(original, recovered))
             throw new IllegalStateException("Different result from original with "+actualErrors+" errors!");
         System.out.println();
