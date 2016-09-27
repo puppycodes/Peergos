@@ -141,6 +141,10 @@ public class UserContext {
         this.useJavaScript = useJavaScript;
     }
 
+    public boolean isJavascript() {
+    	return this.useJavaScript;
+    }
+    
     @JsMethod
     public static CompletableFuture<UserContext> ensureSignedUp(String username, String password, int webPort) throws IOException {
         return ensureSignedUp(username, password, webPort, true);

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.stream.*;
+import java.util.zip.GZIPOutputStream;
 
 public class FileTreeNode {
 
@@ -27,6 +28,8 @@ public class FileTreeNode {
     final static int HEADER_BYTES_TO_IDENTIFY_IMAGE_FILE = 8;
     final static int THUMBNAIL_SIZE = 100;
 
+    final static NativeJSThumbnail thumbnail = new NativeJSThumbnail();
+    
     RetrievedFilePointer pointer;
     private FileProperties props;
     String ownername;
@@ -365,26 +368,55 @@ public class FileTreeNode {
             SymmetricKey dirParentKey = dirAccess.getParentKey(rootRKey);
             Location parentLocation = getLocation();
 
-            byte[] thumbData = generateThumbnail(fileData, filename);
-            try {
-                fileData.reset();
-                FileProperties fileProps = new FileProperties(filename, endIndex, LocalDateTime.now(), false, Optional.of(thumbData));
-                FileUploader chunks = new FileUploader(filename, fileData, startIndex, endIndex, fileKey, fileMetaKey, parentLocation, dirParentKey, monitor, fileProps,
-                        EncryptedChunk.ERASURE_ORIGINAL, EncryptedChunk.ERASURE_ALLOWED_FAILURES);
-                byte[] mapKey = context.randomBytes(32);
-                Location nextChunkLocation = new Location(getLocation().owner, getLocation().writer, mapKey);
-                Location fileLocation = chunks.upload(context, parentLocation.owner, (User) entryWriterKey, nextChunkLocation);
-                ReadableFilePointer filePointer = new ReadableFilePointer(fileLocation, fileKey);
-                dirAccess.addFileAndCommit(filePointer, rootRKey, pointer.filePointer, context);
-                return context.uploadChunk(dirAccess, new Location(parentLocation.owner, entryWriterKey, dirMapKey), Collections.emptyList());
-            } catch (IOException e) {
-                CompletableFuture<Boolean> result = new CompletableFuture<>();
-                result.completeExceptionally(e);
-                return result;
-            }
+            byte[] thumbData = new byte[0];
+            //generateThumbnail(context, fileData, filename).thenAccept(thumbData -> {
+	            try {
+	                fileData.reset();
+	                FileProperties fileProps = new FileProperties(filename, endIndex, LocalDateTime.now(), false, Optional.of(thumbData));
+	                FileUploader chunks = new FileUploader(filename, fileData, startIndex, endIndex, fileKey, fileMetaKey, parentLocation, dirParentKey, monitor, fileProps,
+	                        EncryptedChunk.ERASURE_ORIGINAL, EncryptedChunk.ERASURE_ALLOWED_FAILURES);
+	                byte[] mapKey = context.randomBytes(32);
+	                Location nextChunkLocation = new Location(getLocation().owner, getLocation().writer, mapKey);
+	                Location fileLocation = chunks.upload(context, parentLocation.owner, (User) entryWriterKey, nextChunkLocation);
+	                ReadableFilePointer filePointer = new ReadableFilePointer(fileLocation, fileKey);
+	                dirAccess.addFileAndCommit(filePointer, rootRKey, pointer.filePointer, context);
+	                return context.uploadChunk(dirAccess, new Location(parentLocation.owner, entryWriterKey, dirMapKey), Collections.emptyList());
+	            } catch (IOException e) {
+	                CompletableFuture<Boolean> result = new CompletableFuture<>();
+	                result.completeExceptionally(e);
+	                return result;
+	            }
+            //});
         });
     }
 
+    private CompletableFuture<byte[]> generateThumbnail(UserContext context, InputStream fileData, String filename)
+    {
+    	if(context.isJavascript() && isImage(fileData)) {
+    		return thumbnail.generateThumbnail(readResourceFully(fileData), filename);
+    	} else {
+    		CompletableFuture<byte[]> fut = new CompletableFuture<>();
+    		fut.complete(new byte[0]);
+    		return fut;
+    	}
+    }
+
+    private byte[] readResourceFully(InputStream in) {
+        try {
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+	        byte[] tmp = new byte[4096];
+	        int r;
+	        while ((r=in.read(tmp)) >= 0)
+	        	bout.write(tmp, 0, r);
+	        bout.flush();
+	        bout.close();
+	        in.reset();
+	        return bout.toByteArray();
+        } catch(IOException ioe) {
+        	return new byte[0];
+        }
+    }
+    
     private CompletableFuture<Boolean> updateExistingChild(FileTreeNode existingChild, InputStream fileData,
                                                            long inputStartIndex, long endIndex, UserContext context,
                                                            Consumer<Long> monitor, peergos.shared.user.fs.Fragmenter fragmenter) {
@@ -641,32 +673,6 @@ public class FileTreeNode {
 
     public static FileTreeNode createRoot() {
         return new FileTreeNode(null, null, Collections.EMPTY_SET, Collections.EMPTY_SET, null);
-    }
-
-    public byte[] generateThumbnail(InputStream imageBlob, String fileName) {
-        try {
-            if(!isImage(imageBlob)) {
-                return new byte[0];
-            }
-            BufferedImage image = ImageIO.read(imageBlob);
-            BufferedImage thumbnailImage = new BufferedImage(THUMBNAIL_SIZE, THUMBNAIL_SIZE, image.getType());
-            Graphics2D g = thumbnailImage.createGraphics();
-            g.setComposite(AlphaComposite.Src);
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE, null);
-            g.dispose();
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(thumbnailImage, "JPG", baos);
-            baos.close();
-            return baos.toByteArray();
-        }
-        catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-        return new byte[0];
     }
 
     private boolean isImage(InputStream imageBlob)
